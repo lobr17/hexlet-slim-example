@@ -11,7 +11,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 //$repo = new App\UserRepository();
 
-$users = ['karet', 'mike', 'mishel', 'adel', 'keks', 'kamila', 'nhhffg'];
+//$users = ['karet', 'mike', 'mishel', 'adel', 'keks', 'kamila', 'nhhffg'];
 
 $container = new Container();
 /*$container->set('flash', function () {
