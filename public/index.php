@@ -2,72 +2,61 @@
 
 use Slim\Factory\AppFactory;
 use DI\Container;
-
 use function Symfony\Component\String\s;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-//session_start();
+session_start();
 
-//$repo = new App\UserRepository();
-
-//$users = ['karet', 'mike', 'mishel', 'adel', 'keks', 'kamila', 'nhhffg'];
+$repo = new App\UserRepository();
 
 $container = new Container();
-/*$container->set('flash', function () {
-    return new \Slim\Flash\Messages();
-});*/
 $container->set('renderer', function () {
     return new \Slim\Views\PhpRenderer(__DIR__ . '/../templates');
 });
 
-//AppFactory::setContainer($container);
-//$app = AppFactory::create();
-$app = AppFactory::createFromContainer($container);
+$container->set('flash', function () {
+    return new \Slim\Flash\Messages();
+});
+
+AppFactory::setContainer($container);
+$app = AppFactory::create();
 $app->addErrorMiddleware(true, true, true);
 
-$app->get('/', function ($request, $response) {
+$router = $app->getRouteCollector()->getRouteParser();
+
+$app->get('/', function ($request, $response) use ($router) {
+    $router->urlFor('users');
+
     return $this->get('renderer')->render($response, 'index.phtml');
 });
 
-$app->get('/users', function ($request, $response) use ($users) {
-//    $user = $request->getParsedBodyParam('user');	
-    
-    $term = $request->getQueryParam('term'); 
-    $users = collect($users)->filter(
-	    function($user) {
-		    //   return empty($term) ? true : s($user['firstName'])->ignoreCase()->startsWith($term);
-		return empty($term) ? true : strpost($user, $term);
-	    } 
-    );
-    //$users = strpos($users, $term);
-
+$app->get('/users', function ($request, $response) use ($repo) {
+    $flash = $this->get('flash')->getMessages();		
+    $users = $repo->all();
     $params = [
         'users' => $users,
-        'term' => $term
+        'flash' => $flash
     ];
-
-
-    return $this->get('renderer')->render($response, 'users/index.phtml', $params);
-});
+    return $this->get('renderer')->render($response, "users/index.phtml", $params);
+})->setName('users');
 
 $app->get('/users/new', function ($request, $response) {
     $params = [
-       'user' => ['name' => '', 'secondName' => '']	
+        'user' => ['title' => '']
     ];
-    return $this->get('renderer')->render($response, 'users/new.phtml');
 
+    return $this->get('renderer')->render($response, 'users/new.phtml', $params);
 });
 
-/*$app->get('/foo', function ($req, $res) {
-    $this->get('flash')->addMessage('success', 'This is a message');
-    return $res->withRedirect('/bar');
+$app->post('/users', function ($request, $response) use ($repo) {
+    $user = $request->getParsedBodyParam('user');    
+    $repo->save($user);
+
+    $this->get('flash')->addMessage('success', 'User Added');
+
+    return $response->withRedirect('/users');
 });
 
-$app->get('/bar', function ($req, $res, $args) {
-    $messages = $this->get('flash')->getMessages();
-    print_r($messages);
-});
- */
 $app->run();
 

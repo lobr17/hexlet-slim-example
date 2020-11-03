@@ -2,7 +2,7 @@
 
 namespace App;
 
-class CourseRepository
+class UserRepository
 {
     public function __construct()
     {
@@ -21,7 +21,7 @@ class CourseRepository
 
     public function save(array $item)
     {
-        if (empty($item['title']) || $item['paid'] === '') {
+        if (empty($item['title'])) {
             $json = json_encode($item);
             throw new \Exception("Wrong data: {$json}");
         }
