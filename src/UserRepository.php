@@ -21,7 +21,7 @@ class UserRepository
 
     public function save(array $item)
     {
-        if (empty($item['title'])) {
+        if (empty($item['name']) || empty($item['sex'])) {
             $json = json_encode($item);
             throw new \Exception("Wrong data: {$json}");
         }

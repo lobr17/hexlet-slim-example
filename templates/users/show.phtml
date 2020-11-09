@@ -1,1 +1,6 @@
-<h1>Hello, <?= $id ?> username <?= $nickname; ?></h1>
+<?php foreach ($user as $key => $value): ?>
+  <div>
+      <?= $key ?>: <?= $value ?>
+  </div>
+<?php endforeach ?>
+
