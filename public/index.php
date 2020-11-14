@@ -1,6 +1,7 @@
 <?php
 
 use Slim\Factory\AppFactory;
+use Slim\Middleware\MethodOverrideMiddleware;
 use DI\Container;
 use App\Validator;
 //use function Symfony\Component\String\s;
@@ -20,6 +21,7 @@ $container->set('flash', function () {
 
 AppFactory::setContainer($container);
 $app = AppFactory::create();
+$app->add(MethodOverrideMiddleware::class);
 $app->addErrorMiddleware(true, true, true);
 
 $repo = new App\UserRepository();
@@ -41,9 +43,19 @@ $app->get('/users', function ($request, $response) use ($repo) {
     return $this->get('renderer')->render($response, "users/index.phtml", $params);
 })->setName('users');
 
-$app->get('/users/{name}', function ($request, $response, array $args) use ($repo) {
-    $name = $args['name'];
-    $user = $repo->find($name);
+$app->get('/users/new', function ($request, $response) {
+    $params = [
+        'user' => ['name' => '', 'sex' => ''],
+        'errors' => []
+    ];
+
+    return $this->get('renderer')->render($response, 'users/new.phtml', $params);
+});
+
+
+$app->get('/users/{id}', function ($request, $response, array $args) use ($repo) {
+    $id = $args['id'];
+    $user = $repo->find($id);
 
     if (!$user) {
         return $response->withStatus(404)->write('Page not found');
@@ -57,16 +69,7 @@ $app->get('/users/{name}', function ($request, $response, array $args) use ($rep
 })->setName('user');
 
 
-$app->get('/users/new', function ($request, $response) {
-    $params = [
-        'user' => ['name' => '', 'sex' => ''],
-        'errors' => []
-    ];
-
-    return $this->get('renderer')->render($response, 'users/new.phtml', $params);
-});
-
-$app->get('/users/{id}/edit', function ($request, $response, array $args) {
+$app->get('/users/{id}/edit', function ($request, $response, array $args) use ($repo) {
     $id = $args['id'];
     $user = $repo->find($id);
     $params = [
@@ -102,7 +105,7 @@ $app->post('/users', function ($request, $response) use ($repo, $router) {
 
 });
 
-$app->patch('/users/{id}', function ($request, $response, array $args) use ($repo)  {
+$app->patch('/users/{id}', function ($request, $response, array $args) use ($repo, $router)  {
     $id = $args['id'];
     $user = $repo->find($id);
     $data = $request->getParsedBodyParam('user');
@@ -129,7 +132,6 @@ $app->patch('/users/{id}', function ($request, $response, array $args) use ($rep
     $response = $response->withStatus(422);
     return $this->get('renderer')->render($response, 'users/edit.phtml', $params);
 });
-
 
 $app->run();
 

@@ -14,7 +14,7 @@ class UserRepository
         return array_values($_SESSION);
     }
 
-    public function find(int $id)
+    public function find($id)
     {
         return $_SESSION[$id];
     }
