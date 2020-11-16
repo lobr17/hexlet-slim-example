@@ -10,6 +10,11 @@ require __DIR__ . '/../vendor/autoload.php';
 
 session_start();
 
+/*$app->post('/users', function ($request, $response) {
+    return $response->withHeader('Set-Cookie', "foo=bar");
+});*/
+
+
 $container = new Container();
 $container->set('renderer', function () {
     return new \Slim\Views\PhpRenderer(__DIR__ . '/../templates');
@@ -45,7 +50,7 @@ $app->get('/users', function ($request, $response) use ($repo) {
 
 $app->get('/users/new', function ($request, $response) {
     $params = [
-        'user' => ['name' => '', 'sex' => ''],
+        'userData' => [],
         'errors' => []
     ];
 
@@ -82,21 +87,21 @@ $app->get('/users/{id}/edit', function ($request, $response, array $args) use ($
 
 $app->post('/users', function ($request, $response) use ($repo, $router) {
     // Извлекаем данные формы
-    $user = $request->getParsedBodyParam('user');
+    $userData = $request->getParsedBodyParam('user');
 
     $validator = new Validator();
-    $errors = $validator->validate($user);
+    $errors = $validator->validate($userData);
 
     if (count($errors) === 0) {
     // Если данные коректны: сохр, доб флеш, редирект
-        $repo->save($user);
+        $id = $repo->save($userData);
 	$this->get('flash')->addMessage('success', 'User Added');
-	$url = $router->urlFor('users');
-        return $response->withRedirect($url);
+	return $response/*->withHeader('X-ID', $id)*/
+                        ->withRedirect($router->urlFor('users'));
     }
 
     $params = [
-        'user' => $user,
+        'userData' => $userData,
         'errors' => $errors
     ];
 
@@ -105,26 +110,38 @@ $app->post('/users', function ($request, $response) use ($repo, $router) {
 
 });
 
+$app->get('/user/{id}/edit', function ($request, $response, array $args) use ($repo) {
+    $id = $args['id'];
+    $school = $repo->find($id);
+    $params = [
+        'user' => $user,
+	'errors' => [],
+	'userData' => $userData
+    ];
+    return $this->get('renderer')->render($response, 'user/edit.phtml', $params);
+})->setName('editUser');
+
 $app->patch('/users/{id}', function ($request, $response, array $args) use ($repo, $router)  {
     $id = $args['id'];
     $user = $repo->find($id);
-    $data = $request->getParsedBodyParam('user');
+    $userData = $request->getParsedBodyParam('user');
 
     $validator = new Validator();
-    $errors = $validator->validate($data);
+    $errors = $validator->validate($userData);
 
     if (count($errors) === 0) {
         // Ручное копирование данных из формы в нашу сущность
-        $user['name'] = $data['name'];
+        $user['name'] = $userData['name'];
+        $user['sex'] = $userData['sex'];
 
-        $this->get('flash')->addMessage('success', 'School has been updated');
+        $this->get('flash')->addMessage('success', 'User has been updated');
         $repo->save($user);
         $url = $router->urlFor('editUser', ['id' => $user['id']]);
         return $response->withRedirect($url);
     }
 
     $params = [
-        'userData' => $data,
+        'userData' => $userData,
         'user' => $user,
         'errors' => $errors
     ];
@@ -132,6 +149,17 @@ $app->patch('/users/{id}', function ($request, $response, array $args) use ($rep
     $response = $response->withStatus(422);
     return $this->get('renderer')->render($response, 'users/edit.phtml', $params);
 });
+
+$router = $app->getRouteCollector()->getRouteParser();
+
+$app->delete('/users/{id}', function ($request, $response, array $args) use ($repo, $router) {
+    $id = $args['id'];
+    $repo->destroy($id);
+    $this->get('flash')->addMessage('success', 'User has been deleted');
+    return $response->withRedirect($router->urlFor('users'));
+});
+
+
 
 $app->run();
 

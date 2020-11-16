@@ -19,13 +19,20 @@ class UserRepository
         return $_SESSION[$id];
     }
 
-    public function save(array $item)
+    public function destroy($id)
+    {
+        unset($_SESSION[$id]);
+    }
+
+    public function save(array &$item)
     {
         if (empty($item['name']) || empty($item['sex'])) {
             $json = json_encode($item);
             throw new \Exception("Wrong data: {$json}");
         }
-        $item['id'] = uniqid();
+	if (!isset($item['id'])) {
+	    $item['id'] = uniqid();
+	}
         $_SESSION[$item['id']] = $item;
     }
 }

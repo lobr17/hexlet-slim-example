@@ -1,9 +1,10 @@
-<form action="/users/<?= htmlspecialchars($user['id']) ?>" method="post">
+<a href="/users">Пользователи</a>
+<form action="/users/<?= $user['id'] ?>" method="post">
     <input type="hidden" name="_METHOD" value="PATCH">
     <div>
       <label>
           Название *
-          <input type="text" name="user[name]" value="<?= htmlspecialchars($user['name'] ?? ''); ?>">
+          <input type="text" name="user[name]" value="<?= htmlspecialchars($userData['name'] ?? ''); ?>">
       </label>
       <?php if (isset($errors['name'])): ?>
           <div><?= $errors['name'] ?></div>
@@ -12,7 +13,7 @@
     <div>
       <label>
           Пол *
-          <input type="text" name="user[sex]" value="<?= htmlspecialchars($user['sex'] ?? ''); ?>">
+          <input type="text" name="user[sex]" value="<?= htmlspecialchars($userData['sex'] ?? ''); ?>">
       </label>
       <?php if (isset($errors['sex'])): ?>
           <div><?= $errors['sex'] ?></div>
@@ -20,5 +21,9 @@
     </div>
 
     <input type="submit" value="Update">
+</form>
+<form action="/users/<?= $user['id'] ?>" method="post">
+  <input type="hidden" name="_METHOD" value="DELETE">
+  <input type="submit" value="Remove">
 </form>
 

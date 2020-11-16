@@ -13,7 +13,7 @@
 
 <?php foreach ($users as $user): ?>
  <div> 
-       <a href="/users/<?= $user['id'] ?>"><?= htmlspecialchars($user['name']) ?></a>
+       <a href="/users/<?= $user['id'] ?>/edit"><?= htmlspecialchars($user['name']) ?></a>
  </div>
  <div>
 	<?= htmlspecialchars($user['sex']) ?>
