@@ -36,4 +36,3 @@ class UserRepository
         $_SESSION[$item['id']] = $item;
     }
 }
-

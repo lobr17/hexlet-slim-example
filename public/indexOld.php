@@ -24,7 +24,8 @@ $app = AppFactory::create();
 $app->add(MethodOverrideMiddleware::class);
 $app->addErrorMiddleware(true, true, true);
 
-//$repo = new App\UserRepository();
+$repo = new App\UserRepository();
+
 $router = $app->getRouteCollector()->getRouteParser();
 
 $app->get('/', function ($request, $response) use ($router) {
@@ -33,58 +34,29 @@ $app->get('/', function ($request, $response) use ($router) {
     return $this->get('renderer')->render($response, 'index.phtml');
 });
 
-$app->get('/users', function ($request, $response) use ($router) {
+$app->get('/users', function ($request, $response) use ($repo) {
     $flash = $this->get('flash')->getMessages();		
-    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
-    
+  
     $params = [
-        'users' => $users,
+        'users' => $repo->all(),
         'flash' => $flash
     ];
     return $this->get('renderer')->render($response, "users/index.phtml", $params);
 })->setName('users');
 
 $app->get('/users/new', function ($request, $response) {
-    $users = json_decode($request->getCookieParam('users', json_encode([])), true);	
     $params = [
-        'user' => ['name' => '', 'sex' => ''],
+        'userData' => [],
         'errors' => []
     ];
 
     return $this->get('renderer')->render($response, 'users/new.phtml', $params);
 });
 
-$app->post('/users', function ($request, $response) use ($router) {
-    // Извлекаем данные формы
-    $user = $request->getParsedBodyParam('user');
 
-    $validator = new Validator();
-    $errors = $validator->validate($user);
-
-    if (count($errors) === 0) {
-    // Если данные коректны: сохр, доб флеш, редирект
-        $users = json_decode($request->getCookieParam('users', json_encode([])), true);
-	$users[] = $user;
-	$encodedUsers = json_encode($users);
-
-        $this->get('flash')->addMessage('success', 'User Added');
-	return $response->withHeader('Set-Cookie', "users={$encodedUsers};Path=/")
-		->withRedirect('/');
-    }
-
-    $params = [
-        'user' => $user,
-        'errors' => $errors
-    ];
-
-    return $this->get('renderer')->render($response, 'users/new.phtml', $params);
-
-});
-
-
-$app->get('/users/{id}', function ($request, $response, array $args) {
+$app->get('/users/{id}', function ($request, $response, array $args) use ($repo) {
     $id = $args['id'];
-    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
+    $user = $repo->find($id);
 
     if (!$user) {
         return $response->withStatus(404)->write('Page not found');
@@ -108,6 +80,32 @@ $app->get('/users/{id}/edit', function ($request, $response, array $args) use ($
     return $this->get('renderer')->render($response, 'users/edit.phtml', $params);
 
 })->setName('editUser');
+
+$app->post('/users', function ($request, $response) use ($repo, $router) {
+    // Извлекаем данные формы
+    $userData = $request->getParsedBodyParam('user');
+
+    $validator = new Validator();
+    $errors = $validator->validate($userData);
+
+    if (count($errors) === 0) {
+    // Если данные коректны: сохр, доб флеш, редирект
+        $id = $repo->save($userData);
+	$this->get('flash')->addMessage('success', 'User Added');
+	return $response->withRedirect($router->urlFor('users'));
+    }
+
+    $params = [
+        'userData' => $userData,
+        'errors' => $errors
+    ];
+
+    $response = $response->withStatus(422);
+    return $this->get('renderer')->render($response, 'users/new.phtml', $params);
+
+});
+
+
 
 
 $app->get('/user/{id}/edit', function ($request, $response, array $args) use ($repo) {
@@ -162,3 +160,4 @@ $app->delete('/users/{id}', function ($request, $response, array $args) use ($re
 
 
 $app->run();
+

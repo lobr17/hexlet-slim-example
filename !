@@ -98,9 +98,10 @@ $app->get('/users/{id}', function ($request, $response, array $args) {
 })->setName('user');
 
 
-$app->get('/users/{id}/edit', function ($request, $response, array $args) use ($repo) {
+$app->get('/users/{id}/edit', function ($request, $response, array $args) {
     $id = $args['id'];
-    $user = $repo->find($id);
+    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
+
     $params = [
         'user' => $user,
 	'errors' => []
@@ -110,20 +111,10 @@ $app->get('/users/{id}/edit', function ($request, $response, array $args) use ($
 })->setName('editUser');
 
 
-$app->get('/user/{id}/edit', function ($request, $response, array $args) use ($repo) {
+$app->patch('/users/{id}', function ($request, $response, array $args) use ($router)  {
     $id = $args['id'];
-    $school = $repo->find($id);
-    $params = [
-        'user' => $user,
-	'errors' => [],
-	'userData' => $userData
-    ];
-    return $this->get('renderer')->render($response, 'user/edit.phtml', $params);
-})->setName('editUser');
+    //$users = json_decode($request->getCookieParam('users', json_encode([])), true);
 
-$app->patch('/users/{id}', function ($request, $response, array $args) use ($repo, $router)  {
-    $id = $args['id'];
-    $user = $repo->find($id);
     $userData = $request->getParsedBodyParam('user');
 
     $validator = new Validator();
@@ -131,17 +122,37 @@ $app->patch('/users/{id}', function ($request, $response, array $args) use ($rep
 
     if (count($errors) === 0) {
         // Ручное копирование данных из формы в нашу сущность
-        $user['name'] = $userData['name'];
+        $users = json_decode($request->getCookieParam('users', json_encode([])), true);
+        
+	$updatedUsers = array_map(function ($user) use ($userData, $id) {
+            if ($user['id'] === $id) {
+                return ['name' => $userData['name'], 'sex' => $userData['sex'], 'id' => $id];
+            }
+            return $user;
+        }, $users);
+        $encodedUsers = json_encode($updatedUsers);
+    
+/*
+ 	$user['name'] = $userData['name'];
         $user['sex'] = $userData['sex'];
-
+ */
         $this->get('flash')->addMessage('success', 'User has been updated');
-        $repo->save($user);
-        $url = $router->urlFor('editUser', ['id' => $user['id']]);
+
+
+/*        $url = $router->urlFor('editUser', ['id' => $user['id']]);
         return $response->withRedirect($url);
+
+ */
+
+	//Возможно нужно работать с этим роутером см. выше
+	
+	return $response->withHeader('Set-Cookie', "users={$encodedUsers};Path=/")
+		->withRedirect('/');;
+
     }
 
     $params = [
-        'userData' => $userData,
+        'user' => $user,
         'user' => $user,
         'errors' => $errors
     ];
@@ -151,7 +162,7 @@ $app->patch('/users/{id}', function ($request, $response, array $args) use ($rep
 });
 
 $router = $app->getRouteCollector()->getRouteParser();
-
+/*
 $app->delete('/users/{id}', function ($request, $response, array $args) use ($repo, $router) {
     $id = $args['id'];
     $repo->destroy($id);
@@ -159,6 +170,6 @@ $app->delete('/users/{id}', function ($request, $response, array $args) use ($re
     return $response->withRedirect($router->urlFor('users'));
 });
 
-
+ */
 
 $app->run();
