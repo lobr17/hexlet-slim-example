@@ -6,22 +6,22 @@ class UserRepository
 {
     public function __construct()
     {
-        session_start();
+        setcookie();
     }
 
     public function all()
     {
-        return array_values($_SESSION);
+        return array_values($_COOKIES);
     }
 
     public function find($id)
     {
-        return $_SESSION[$id];
+        return $_COOKIES[$id];
     }
 
     public function destroy($id)
     {
-        unset($_SESSION[$id]);
+        unset($_COOKIES[$id]);
     }
 
     public function save(array &$item)
@@ -33,6 +33,6 @@ class UserRepository
 	if (!isset($item['id'])) {
 	    $item['id'] = uniqid();
 	}
-        $_SESSION[$item['id']] = $item;
+        $_COOKIES[$item['id']] = $item;
     }
 }
