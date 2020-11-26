@@ -8,7 +8,7 @@ use App\Validator;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-//session_start();
+session_start();
 
 $container = new Container();
 $container->set('renderer', function () {
