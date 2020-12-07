@@ -24,131 +24,129 @@ $app = AppFactory::create();
 $app->add(MethodOverrideMiddleware::class);
 $app->addErrorMiddleware(true, true, true);
 
+$repo = new App\UserRepository();
+
 $router = $app->getRouteCollector()->getRouteParser();
 
 $app->get('/', function ($request, $response) use ($router) {
     $router->urlFor('users');
-// Сюда как то прокинуть на конкретного юзера????????
+
     return $this->get('renderer')->render($response, 'index.phtml');
 });
 
-$app->get('/users', function ($request, $response) use ($router) {
+$app->get('/users', function ($request, $response) use ($repo) {
     $flash = $this->get('flash')->getMessages();		
-    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
-    
+  
     $params = [
-        'users' => $users,
+        'users' => $repo->all(),
         'flash' => $flash
     ];
-//    print_r($params);
     return $this->get('renderer')->render($response, "users/index.phtml", $params);
 })->setName('users');
 
 $app->get('/users/new', function ($request, $response) {
-    $users = json_decode($request->getCookieParam('users', json_encode([])), true);	
     $params = [
-        'user' => ['name' => '', 'sex' => ''],
+        'userData' => [],
         'errors' => []
     ];
 
     return $this->get('renderer')->render($response, 'users/new.phtml', $params);
 });
 
-$app->get('/users/{id}', function ($request, $response, array $args) use ($router) {
+
+$app->get('/users/{id}', function ($request, $response, array $args) use ($repo) {
     $id = $args['id'];
-    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
-    $idUsers = array_filter($users, function($user) {
-        return $user['id'] === $id; 
-    });
+    $user = $repo->find($id);
 
     if (!$user) {
         return $response->withStatus(404)->write('Page not found');
     }
 
     $params = [
-	    'user' => $user,
-	    'id' => $id
+        'user' => $user
     ];
-
-    print_r($id);
 
     return $this->get('renderer')->render($response, 'users/show.phtml', $params);
 })->setName('user');
 
-$app->get('/users/{id}/edit', function ($request, $response, array $args) use ($router) {
-    $id = $args['id'];    
-    $users = json_decode($request->getCookieParam('users', json_encode([])), true);
+
+$app->get('/users/{id}/edit', function ($request, $response, array $args) use ($repo) {
+    $id = $args['id'];
+    $user = $repo->find($id);
     $params = [
         'user' => $user,
-        'errors' => [],
-        //?????
-        'route' => $router->urlFor('editUser', ['id' => $user['id']])
+	'errors' => []
     ];
     return $this->get('renderer')->render($response, 'users/edit.phtml', $params);
 
 })->setName('editUser');
 
-
-$app->post('/users', function ($request, $response) use ($router) {
+$app->post('/users', function ($request, $response) use ($repo, $router) {
     // Извлекаем данные формы
-    $user = $request->getParsedBodyParam('user');
+    $userData = $request->getParsedBodyParam('user');
 
     $validator = new Validator();
-    $errors = $validator->validate($user);
+    $errors = $validator->validate($userData);
 
     if (count($errors) === 0) {
     // Если данные коректны: сохр, доб флеш, редирект
-        $users = json_decode($request->getCookieParam('users', json_encode([])), true);
-	$users[] = $user;
-
-	//Как сохранить?? 
-	$encodedUsers = json_encode($users);
-
-        $this->get('flash')->addMessage('success', 'User Added');
-	return $response->withHeader('Set-Cookie', "users={$encodedUsers};Path=/users")
-		->withRedirect('/users');
+        $id = $repo->save($userData);
+	$this->get('flash')->addMessage('success', 'User Added');
+	return $response->withRedirect($router->urlFor('users'));
     }
 
     $params = [
-        'user' => $user,
+        'userData' => $userData,
         'errors' => $errors
     ];
 
+    $response = $response->withStatus(422);
     return $this->get('renderer')->render($response, 'users/new.phtml', $params);
 
 });
 
 
-$app->patch('/users/{id}', function ($request, $response, array $args) use ($router)  {
+$app->get('/user/{id}/edit', function ($request, $response, array $args) use ($repo) {
     $id = $args['id'];
+    $school = $repo->find($id);
+    $params = [
+        'user' => $user,
+	'errors' => [],
+	'userData' => $userData
+    ];
+    return $this->get('renderer')->render($response, 'user/edit.phtml', $params);
+})->setName('editUser');
+
+$app->patch('/users/{id}', function ($request, $response, array $args) use ($repo, $router)  {
+    $id = $args['id'];
+    $user = $repo->find($id);
     $userData = $request->getParsedBodyParam('user');
+
     $validator = new Validator();
     $errors = $validator->validate($userData);
 
     if (count($errors) === 0) {
-        $users = json_decode($request->getCookieParam('users', json_encode([])), true);          
-        $updatedUsers = array_map(function ($user) use ($userData, $id) {
-            if ($user['id'] === $id) {
-                return ['name' => $userData['name'], 'sex' => $userData['sex'], 'id' => $id];
-            }
-            return $user;
-        }, $users);
-        $encodedUsers = json_encode($updatedUsers);
-	$this->get('flash')->addMessage('success', 'User has been updated');
-	$route = $router->urlFor('editUser', ['id' => $user['id']]);
-        return $response->withHeader('Set-Cookie', "users={$encodedUsers};Path=/users/{id}/edit")->withRedirect($route, 302);
+        // Ручное копирование данных из формы в нашу сущность
+        $user['name'] = $userData['name'];
+        $user['sex'] = $userData['sex'];
+
+        $this->get('flash')->addMessage('success', 'User has been updated');
+        $repo->save($user);
+        $url = $router->urlFor('editUser', ['id' => $user['id']]);
+        return $response->withRedirect($url);
     }
 
     $params = [
-        'user' => $userData,
+        'userData' => $userData,
+        'user' => $user,
         'errors' => $errors
     ];
 
     $response = $response->withStatus(422);
     return $this->get('renderer')->render($response, 'users/edit.phtml', $params);
 });
-/*
 
+$router = $app->getRouteCollector()->getRouteParser();
 
 $app->delete('/users/{id}', function ($request, $response, array $args) use ($repo, $router) {
     $id = $args['id'];
@@ -156,7 +154,6 @@ $app->delete('/users/{id}', function ($request, $response, array $args) use ($re
     $this->get('flash')->addMessage('success', 'User has been deleted');
     return $response->withRedirect($router->urlFor('users'));
 });
- */
-
 
 $app->run();
+

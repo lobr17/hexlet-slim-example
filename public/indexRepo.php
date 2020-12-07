@@ -106,8 +106,6 @@ $app->post('/users', function ($request, $response) use ($repo, $router) {
 });
 
 
-
-
 $app->get('/user/{id}/edit', function ($request, $response, array $args) use ($repo) {
     $id = $args['id'];
     $school = $repo->find($id);
@@ -156,8 +154,6 @@ $app->delete('/users/{id}', function ($request, $response, array $args) use ($re
     $this->get('flash')->addMessage('success', 'User has been deleted');
     return $response->withRedirect($router->urlFor('users'));
 });
-
-
 
 $app->run();
 
