@@ -34,7 +34,7 @@ $app->get('/users/new', function ($request, $response) {
     	
     $params = [
         'user' => [],
-        //'errors' => []
+        
     ];
     return $this->get('renderer')->render($response, 'users/new.phtml', $params);
 });
